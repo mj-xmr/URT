@@ -117,7 +117,6 @@
 #include <boost/random/normal_distribution.hpp>
 #include <boost/generator_iterator.hpp>
 
-#include "./CsvManager.hpp"
 #include "./Tools.hpp"
 
 #include "./OLS.hpp"
