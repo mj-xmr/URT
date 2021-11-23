@@ -8,7 +8,7 @@ export PATH=/usr/lib/ccache:$PATH
 export CFLAGS="-O3 -march=native"
 export CXXFLAGS=$CFLAGS
 
-#make -j $PROC || make # Too many resources
+cd "$DIR"
 make
 sudo make install
 #cp ../lib/*.so* ${HOME}/devel/lib/tree/lib
