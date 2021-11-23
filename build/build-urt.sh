@@ -10,8 +10,9 @@ export CXXFLAGS=$CFLAGS
 
 cd "$DIR"
 make
-sudo make install
-#cp ../lib/*.so* ${HOME}/devel/lib/tree/lib
-#mkdir -p ${URT_INCLUDE}
-#cp ../include/*.h* ${URT_INCLUDE}
+
+URT_INCLUDE=/usr/include/URT
+sudo mkdir -p "$URT_INCLUDE"
+sudo cp ../lib/*.so* /usr/lib/
+sudo cp ../include/*.h* "$URT_INCLUDE"
 
