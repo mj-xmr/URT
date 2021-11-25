@@ -141,6 +141,8 @@ void KPSS<T>::show()
    ur::show();
 }
 
+template class urt::KPSS<double>;
+template class urt::KPSS<float>;
 //=================================================================================================
 
 }

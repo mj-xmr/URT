@@ -76,6 +76,9 @@ void ADF<T>::show()
    ur::show();
 }
 
+template class urt::ADF<double>;
+template class urt::ADF<float>;
+
 //=================================================================================================
 
 }

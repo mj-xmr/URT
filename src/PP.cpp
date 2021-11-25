@@ -153,6 +153,8 @@ void PP<T>::show()
    ur::lags = 0;
 }
 
+template class urt::PP<double>;
+template class urt::PP<float>;
 //=================================================================================================
 
 }

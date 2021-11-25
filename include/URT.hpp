@@ -127,10 +127,11 @@
 #include "./KPSS.hpp"
 
 // template class specializations
+/*
 template class urt::OLS<double>;
 template class urt::OLS<float>;
-//template class urt::UnitRoot<double>;
-//template class urt::UnitRoot<float>;
+template class urt::UnitRoot<double>;
+template class urt::UnitRoot<float>;
 template class urt::ADF<double>;
 template class urt::ADF<float>;
 template class urt::DFGLS<double>;
@@ -139,7 +140,7 @@ template class urt::PP<double>;
 template class urt::PP<float>;
 template class urt::KPSS<double>;
 template class urt::KPSS<float>;
-
+*/
 //=================================================================================================
 
 #endif
