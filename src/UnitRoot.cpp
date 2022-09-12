@@ -1,16 +1,30 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
-#include "../include/URT.hpp"
+#include "../include/URTMin.hpp"
+#include "../include/UnitRoot.hpp"
+#include "../include/OLS.hpp"
 
-#ifdef _OPENMP 
+//#include <boost/math/distributions/students_t.hpp>
+//#include <boost/math/special_functions/gamma.hpp>
+#include <boost/random.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <boost/generator_iterator.hpp>
+
+#include <iostream>
+#include <iomanip>
+#include <vector>
+#include <string>
+
+#ifdef _OPENMP
   #include <omp.h>
   // getting maximum number of threads available
   static const int MAX_THREADS = omp_get_max_threads();
 #endif
 
 namespace urt {
+boost::mt19937 rng;
 
 //=================================================================================================
 
@@ -18,35 +32,35 @@ namespace urt {
 template <typename T>
 UnitRoot<T>::UnitRoot(const Vector<T>& data, int lags, const std::string& trend, bool regression)
 {
-   // copying data 
-   this->data = data; 
-   // setting pointer to data      
+   // copying data
+   this->data = data;
+   // setting pointer to data
    set_data();
    #ifdef USE_ARMA
    nobs = data.n_rows;
-   #elif defined(USE_BLAZE) || defined(USE_EIGEN) 
+   #elif defined(USE_BLAZE) || defined(USE_EIGEN)
    nobs = data.size();
-   #endif        
+   #endif
    this->lags = lags;
    this->trend = trend;
    this->regression = regression;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
-    
+
 // constructor for running test with lag length optmization
 template <typename T>
 UnitRoot<T>::UnitRoot(const Vector<T>& data, const std::string& method, const std::string& trend, bool regression)
 {
-   // copying data 
+   // copying data
    this->data = data;
    // setting pointer to data
    set_data();
    #ifdef USE_ARMA
    nobs = data.n_rows;
-   #elif defined(USE_BLAZE) || defined(USE_EIGEN) 
+   #elif defined(USE_BLAZE) || defined(USE_EIGEN)
    nobs = data.size();
-   #endif   
+   #endif
    this->method = method;
    this->trend = trend;
    this->regression = regression;
@@ -120,7 +134,7 @@ void UnitRoot<T>::set_lags()
          max_lags = 0;
          std::cout << "\n  WARNING: maximum number of lags cannot be negative, it has been set to a default value (L12-rule).\n\n";
       }
-      // if user has switched from a default max_lags value to a value of his choice or to a given number of lags (for ADF and DFGLS tests only) 
+      // if user has switched from a default max_lags value to a value of his choice or to a given number of lags (for ADF and DFGLS tests only)
       if (!lags_type.empty() && (lags != prev_lags || max_lags != prev_max_lags)) {
          lags_type = std::string();
       }
@@ -144,11 +158,11 @@ void UnitRoot<T>::set_lags()
       else {
          max_lags = int(12 * pow(0.01 * nobs, 0.25));
       }
-      // updating lags only for PP and KPSS tests, for ADF and DFGLS tests lags will be updated at the next optimization or set back to prev_lags if max_lags, trend, method and level are the same as before 
-      lags = max_lags; 
+      // updating lags only for PP and KPSS tests, for ADF and DFGLS tests lags will be updated at the next optimization or set back to prev_lags if max_lags, trend, method and level are the same as before
+      lags = max_lags;
    }
 
-   // for all tests if the number of lags is still different than its previous value 
+   // for all tests if the number of lags is still different than its previous value
    if (!optim && lags != prev_lags) {
       new_test = true;
       new_lags = true;
@@ -217,7 +231,7 @@ void UnitRoot<T>::set_method()
    if (p == valid_methods.end()) {
       method = "AIC";
       std::cout << "\n  WARNING: unknown method for lag length optimization, AIC has been selected by default.\n\n";
-      std::cout << "  Possible methods for this test are: " << valid_methods << "\n";
+      print_methods();
    }
    if (method != prev_method) {
       new_method = true;
@@ -233,9 +247,9 @@ void UnitRoot<T>::set_method()
 // this function needs to know max_lags so it must be run after set_lags()
 template <typename T>
 void UnitRoot<T>::set_IC()
-{   
+{
    // skipping this function if method did not change
-   if (!new_method) { 
+   if (!new_method) {
       return;
    }
    // setting functor to Information Criterion function
@@ -303,6 +317,16 @@ void UnitRoot<T>::set_test_type()
 }
 
 //*************************************************************************************************
+template <typename T>
+void UnitRoot<T>::print_methods() const
+{
+    std::cout << "  Possible methods for this test are: ";
+    for (const auto & method : valid_methods)
+    {
+      std::cout << method << " ";
+    }
+    std::cout << "\n";
+}
 
 // set regression trend, checking input validity
 template <typename T>
@@ -320,7 +344,7 @@ void UnitRoot<T>::set_trend()
       trend_type = "constant";
       npar = 2;
       std::cout << "\n  WARNING: unknown regression trend selected, regression with constant term has been selected by default.\n\n";
-      std::cout << "  Possible trends for this test are " << valid_trends << "\n"; 
+      print_methods();
    } else {
       if (trend == "c") {
          trend_type = "constant";
@@ -351,10 +375,10 @@ void UnitRoot<T>::set_trend()
 // OLS demeaning or detrending
 template <typename T>
 void UnitRoot<T>::ols_detrend()
-{  
+{
    // initializing w => constant case
    #ifdef USE_ARMA
-   Matrix<T> w(nobs, 1, arma::fill::ones); 
+   Matrix<T> w(nobs, 1, arma::fill::ones);
    #elif USE_BLAZE
    Matrix<T> w(nobs, 1);
    w = forEach(w, [](T val){ return 1; });
@@ -401,14 +425,14 @@ void UnitRoot<T>::gls_detrend()
       nc = 2;
    }
    // demean case
-   else if (trend == "c") { 
+   else if (trend == "c") {
       alpha = 1.0 - 7.0 / nobs;
       nc = 1;
    } else {
       throw std::invalid_argument("\n  ERROR: in UnitRoot<T>::gls_detrend(), no detrending possible when regression trend set to no constant.\n\n");
    }
 
-   Matrix<T> u(nobs, nc); 
+   Matrix<T> u(nobs, nc);
    Vector<T> v(nobs);
    Matrix<T> w(nobs, nc);
 
@@ -420,8 +444,8 @@ void UnitRoot<T>::gls_detrend()
    if (nc == 2) {
       w(0, 1) = 1;
       u(0, 1) = 1;
-   }   
-    
+   }
+
    for (int i = 1; i < nobs; ++i) {
       w(i, 0) = 1;
       u(i, 0) = 1 - alpha;
@@ -431,7 +455,7 @@ void UnitRoot<T>::gls_detrend()
          u(i, 1) = w(i, 1) - alpha * i;
       }
       v[i] = ptr->operator[](i) - alpha * ptr->operator[](i - 1);
-   } 
+   }
 
    // running OLS
    OLS<T> fit(v, u);
@@ -474,19 +498,19 @@ void UnitRoot<T>::adf_regression()
       // filling matrix of independent variables
       x(i, 0) = ptr->operator[](i + lags);
       // testing if model contains constant term or more
-      if (npar >= 2) { 
-         x(i, 1) = 1; 
+      if (npar >= 2) {
+         x(i, 1) = 1;
          if (npar >= 3) {
             x(i, 2) = i + 1;
             if (npar == 4) {
                x(i, 3) = x(i, 2) * x(i, 2);
             }
          }
-      }   
+      }
       // computing lag difference terms
       for (int j = npar; j < nc ; ++j) {
          x(i, j) = ptr->operator[](i - j + nc) - ptr->operator[](i - j + nc - 1);
-      }  
+      }
    }
 
    // if OLS regression statistics are required
@@ -536,8 +560,8 @@ void UnitRoot<T>::initialize_adf()
       // filling matrix of independent variables
       x(i, 0) = ptr->operator[](i);
       // testing if model contains constant term or more
-      if (npar >= 2) { 
-         x(i, 1) = 1; 
+      if (npar >= 2) {
+         x(i, 1) = 1;
          if (npar >= 3) {
             x(i, 2) = i + 1;
             if (npar == 4) {
@@ -552,7 +576,7 @@ void UnitRoot<T>::initialize_adf()
          } else {
             x(i, j + npar) = 0;
          }
-      }   
+      }
    }
 }
 
@@ -577,7 +601,7 @@ void UnitRoot<T>::optimize_lag()
       results.clear();
       // allocating memory to results vector
       results.resize(max_lags + 1);
- 
+
       // This for loop will be executed by a number of threads equal to MAX_THREADS or will ignore preprocessor directives if compiler does not support OpenMP or if OpenMP not called
       #ifdef _OPENMP
       #pragma omp parallel for num_threads(MAX_THREADS)
@@ -595,8 +619,8 @@ void UnitRoot<T>::optimize_lag()
          Vector<T> ysub(y.segment(i, nrows - i));
          Matrix<T> xsub(x.block(i, 0, nrows - i, npar + i));
          #endif
-         // adding test result for current number of lags to results vector      
-         results[i] = std::make_shared<OLS<T>>(ysub, xsub);         
+         // adding test result for current number of lags to results vector
+         results[i] = std::make_shared<OLS<T>>(ysub, xsub);
          // recording number of lags for current test
          results[i]->lags = i;
          // computing new Information Criterion for other methods
@@ -619,7 +643,7 @@ void UnitRoot<T>::optimize_lag()
       Matrix<T> xsub(x.submat(lags, 0, nrows - 1, npar + lags - 1));
       #elif USE_BLAZE
       Vector<T> ysub(subvector(y, lags, nrows - lags));
-      Matrix<T> xsub(submatrix(x, lags, 0, nrows - lags, npar + lags)); 
+      Matrix<T> xsub(submatrix(x, lags, 0, nrows - lags, npar + lags));
       #elif USE_EIGEN
       Vector<T> ysub(y.segment(lags, nrows - lags));
       Matrix<T> xsub(x.block(lags, 0, nrows - lags, npar + lags));
@@ -650,15 +674,15 @@ T UnitRoot<T>::IC(const std::shared_ptr<OLS<T>>& res)
     // plus 1 for the model with constant
     // plus 2 for the model with constant trend
     // plus 3 for the model with quadratic trend
-  
+
    #ifdef USE_ARMA
    // getting number of regressors
    int k = res->param.n_elem;
    // getting number of residuals
    int n = res->resid.n_elem;
-   // getting residuals sub-vector 
+   // getting residuals sub-vector
    Vector<T> z(res->resid.memptr() + max_lags - res->lags, n - max_lags + res->lags, false);
-   #elif defined(USE_BLAZE) || defined(USE_EIGEN) 
+   #elif defined(USE_BLAZE) || defined(USE_EIGEN)
    // getting number of regressors
    int k = res->param.size();
    // getting number of residuals
@@ -689,7 +713,7 @@ T UnitRoot<T>::IC(const std::shared_ptr<OLS<T>>& res)
 // compute Modified Information Criterion
 template <typename T>
 T UnitRoot<T>::MIC(const std::shared_ptr<OLS<T>>& res)
-{ 
+{
    #ifdef USE_ARMA
    // getting number of residuals
    int n = res->resid.n_elem;
@@ -720,7 +744,7 @@ T UnitRoot<T>::MIC(const std::shared_ptr<OLS<T>>& res)
    // getting data lagged 1 term sub-vector
    Vector<T> y(subvector(*ptr, max_lags, nobs - max_lags - 1));
    // computing y^2
-   T y2 = blaze::trans(y) * y; 
+   T y2 = blaze::trans(y) * y;
    #elif USE_EIGEN
    // computing residuals variance
    T sigma2 = z.dot(z) * factor;
@@ -730,7 +754,7 @@ T UnitRoot<T>::MIC(const std::shared_ptr<OLS<T>>& res)
    T y2 = y.transpose() * y;
    #endif
    // computing tau
-   T tau = (res->param[0] * res->param[0] * y2) / sigma2; 
+   T tau = (res->param[0] * res->param[0] * y2) / sigma2;
    // computing criterion
    return log(sigma2) + ICcc * (tau + res->lags) * factor;
 }
@@ -756,12 +780,12 @@ void UnitRoot<T>::select_lag()
       Matrix<T> xsub(x.submat(i, 0, nrows - 1, npar + i - 1));
       #elif USE_BLAZE
       Vector<T> ysub(subvector(y, i, nrows - i));
-      Matrix<T> xsub(submatrix(x, i, 0, nrows - i, npar + i)); 
+      Matrix<T> xsub(submatrix(x, i, 0, nrows - i, npar + i));
       #elif USE_EIGEN
       Vector<T> ysub(y.segment(i, nrows - i));
       Matrix<T> xsub(x.block(i, 0, nrows - i, npar + i));
       #endif
-      // adding test result for current number of lags to results vector      
+      // adding test result for current number of lags to results vector
       results[i] = std::make_shared<OLS<T>>(ysub, xsub);
       // stopping at the first significant lags difference term for T-STAT method
       if (fabs(results[i]->t_stat[i]) > level) {
@@ -772,11 +796,11 @@ void UnitRoot<T>::select_lag()
             result->get_stats(ysub, xsub);
             prev_regression = true;
          }
-         // recording number of lags 
+         // recording number of lags
          result->lags = i;
          opt_lag_found = true;
          // breaking the loop
-         i = -1; 
+         i = -1;
       }
    }
 
@@ -800,7 +824,7 @@ void UnitRoot<T>::select_lag()
          result->get_stats(ysub, xsub);
          prev_regression = true;
       }
-      // recording number of lags 
+      // recording number of lags
       result->lags = 0;
    }
 
@@ -809,14 +833,14 @@ void UnitRoot<T>::select_lag()
    // updating test t-statistic
    stat = result->t_stat[0];
    // updating previous lags value;
-   prev_lags = lags;   
+   prev_lags = lags;
    // updating previous method
-   prev_method = method; 
+   prev_method = method;
 }
 
 //*************************************************************************************************
 
-// compute ADF tests 
+// compute ADF tests
 template <typename T>
 void UnitRoot<T>::compute_adf()
 {
@@ -838,17 +862,17 @@ void UnitRoot<T>::compute_adf()
       }
       // if new trend or new max_lags (for all methods)
       if (new_trend || new_lags) {
-         // computing vector and matrix for OLS 
+         // computing vector and matrix for OLS
          initialize_adf();
          // turning new_method to false to force a new optimization as trend or lags is new
          new_method = false;
          // optimizing lag
-         (this->*optim_func)();             
+         (this->*optim_func)();
          new_trend = false;
          new_lags = false;
       }
       // if new method only (for all methods)
-      else if (new_method) { 
+      else if (new_method) {
          // optimizing lag
          (this->*optim_func)();
          new_method = false;
@@ -859,7 +883,7 @@ void UnitRoot<T>::compute_adf()
          (this->*optim_func)();
          new_level = false;
       }
-      // if the only change is regression set to true 
+      // if the only change is regression set to true
       else if (regression && !prev_regression) {
          // selecting y sub-vector and x sub-matrix
          #ifdef USE_ARMA
@@ -867,7 +891,7 @@ void UnitRoot<T>::compute_adf()
          Matrix<T> xsub(x.submat(lags, 0, nrows - 1, npar + lags - 1));
          #elif USE_BLAZE
          Vector<T> ysub(subvector(y, lags, nrows - lags));
-         Matrix<T> xsub(submatrix(x, lags, 0, nrows - lags, npar + lags)); 
+         Matrix<T> xsub(submatrix(x, lags, 0, nrows - lags, npar + lags));
          #elif USE_EIGEN
          Vector<T> ysub(y.segment(lags, nrows - lags));
          Matrix<T> xsub(x.block(lags, 0, nrows - lags, npar + lags));
@@ -888,11 +912,11 @@ void UnitRoot<T>::compute_adf()
          new_trend = false;
          new_lags = false;
       }
-      // if the only change is regression set to true 
+      // if the only change is regression set to true
       else if (regression && !prev_regression) {
          result->get_stats(y, x);
          prev_regression = true;
-      } 
+      }
    }
 }
 
@@ -900,25 +924,25 @@ void UnitRoot<T>::compute_adf()
 
 template <typename T>
 void UnitRoot<T>::run_bootstrap()
-{  
+{
    // optim has to be set to false for avoiding optimization in case it was set to true
    bool saved_optim = optim;
    optim = false;
    // saving result from OLS and test stat value (they will be modified during bootstrap)
    T saved_stat = stat;
-   OLS<T> saved_result = *result;   
- 
+   OLS<T> saved_result = *result;
+
    // computing centred residuals from original test
-   #ifdef USE_ARMA 
+   #ifdef USE_ARMA
    Vector<T> eps = result->resid - arma::mean(result->resid);
    #elif USE_BLAZE
    Vector<T> eps(result->resid);
    T m = std::accumulate(&eps[0], &eps[eps.size()], 0.0) / eps.size();
-   eps = forEach(eps, [&m](const T& val){ return val - m; });  
+   eps = forEach(eps, [&m](const T& val){ return val - m; });
    #elif USE_EIGEN
    T m = result->resid.mean();
-   Vector<T> eps = result->resid - Vector<T>::Constant(result->resid.size(), 1, m);   
-   #endif 
+   Vector<T> eps = result->resid - Vector<T>::Constant(result->resid.size(), 1, m);
+   #endif
 
    // computing vector of lags difference terms u dimension
    int nu = nobs - 1;
@@ -926,23 +950,23 @@ void UnitRoot<T>::run_bootstrap()
    Vector<T> u, delta;
 
    if (lags > 0) {
-      #ifdef USE_ARMA 
+      #ifdef USE_ARMA
       // initializing vector of lags difference terms
       u = ptr->subvec(1, lags - 1) - ptr->subvec(0, lags - 2);
       // taking lags difference terms coefficients from original test in reverse order
       delta = arma::flipud(result->param.subvec(npar, result->param.size() - 1));
       #elif USE_BLAZE
       // initializing vector of lags difference terms
-      u = subvector(*ptr, 1, lags - 1) - subvector(*ptr, 0, lags - 1); 
+      u = subvector(*ptr, 1, lags - 1) - subvector(*ptr, 0, lags - 1);
       // taking lags difference terms coefficients from original test in reverse order
-      delta = subvector(result->param, npar, result->param.size() - npar);  
+      delta = subvector(result->param, npar, result->param.size() - npar);
       std::reverse(&delta[0], &delta[delta.size()]);
       #elif USE_EIGEN
       // initializing vector of lags difference terms
-      u = ptr->segment(1, lags - 1) - ptr->segment(0, lags - 1); 
+      u = ptr->segment(1, lags - 1) - ptr->segment(0, lags - 1);
       // taking lags difference terms coefficients from original test in reverse order
       delta = result->param.segment(npar, result->param.size() - npar).reverse();
-      #endif    
+      #endif
    }
    #if defined(USE_ARMA) || defined(USE_BLAZE)
    u.resize(nu);
@@ -953,8 +977,8 @@ void UnitRoot<T>::run_bootstrap()
    // allowing test statistic recalculation even if all parameters remain identical
    new_data = true;
 
-   // initializing new path 
-   #ifdef USE_ARMA 
+   // initializing new path
+   #ifdef USE_ARMA
    Vector<T> new_path(ptr->memptr(), lags + 1, false);
    new_path.resize(nobs);
    #elif USE_BLAZE
@@ -964,30 +988,30 @@ void UnitRoot<T>::run_bootstrap()
    Vector<T> new_path(ptr->segment(0, lags + 1));
    new_path.conservativeResize(nobs, Eigen::NoChange);
    #endif
-    
+
    // vector of new statistics
    std::vector<T> stats(niter);
 
    // initializing Boost random uniform (integer) numbers generator
-   boost::uniform_int<> udistrib(0, eps.size() - 1); 
+   boost::uniform_int<> udistrib(0, eps.size() - 1);
    boost::variate_generator<boost::mt19937&, boost::uniform_int<>> runif(rng, udistrib);
 
    T term = 0;
 
    // bootstrapping Unit-Root test, computing new paths
-   for(int k = niter; k--; ) { 
+   for(int k = niter; k--; ) {
       for (int i = lags; i < nu; ++i) {
          switch (lags) {
             case 0:
                break;
             default:
-               #ifdef USE_ARMA 
+               #ifdef USE_ARMA
                term = arma::as_scalar(arma::Col<T>(u.memptr() + i - lags, lags, false).t() * delta);
                #elif USE_BLAZE
                term = blaze::trans(subvector(u, i - lags, lags)) * delta;
-               #elif USE_EIGEN 
-               term = u.segment(i - lags, lags).transpose() * delta;          
-               #endif 
+               #elif USE_EIGEN
+               term = u.segment(i - lags, lags).transpose() * delta;
+               #endif
          }
          u[i] = term + eps[runif()];
          new_path[i + 1] = new_path[i] + u[i];
@@ -1078,7 +1102,7 @@ const T& UnitRoot<T>::pvalue()
 {
    if (std::isnan(stat)) {
       pval =  -std::nan("");
-   } 
+   }
    else if (!bootstrap) {
       // if a new test has been run or p-value was previously computed by bootstrap
       if (new_test || prev_bootstrap) {
@@ -1090,7 +1114,7 @@ const T& UnitRoot<T>::pvalue()
          new_test = false;
       }
       // NB: if test parameters remain identical but p-value was previously computed using bootstrap, p-value will be recomputed using the critical values coefficients
-   } 
+   }
    else {
       // setting number of iterations
       set_niter();
@@ -1124,10 +1148,10 @@ void UnitRoot<T>::show()
    // for PP test only
    std::string stat_type;
 
-   if (test_type == "tau")  {      
+   if (test_type == "tau")  {
       stat_type = " (Z-tau)";
    }
-   else if (test_type == "rho") { 
+   else if (test_type == "rho") {
      stat_type = " (Z-rho)";
    }
 
@@ -1163,11 +1187,11 @@ void UnitRoot<T>::show()
       } else {
          std::cout << "  Criterion" << std::setw(27) << method << "\n";
       }
-   } else {    
+   } else {
       std::cout << "  Lags" << std::setw(32) << lags << "\n";
    }
 
-   std::cout << "  Trend" << std::setw(31) << trend_type << "\n"; 
+   std::cout << "  Trend" << std::setw(31) << trend_type << "\n";
    std::cout << "  ------------------------------------\n\n";
 
    // outputting test hypothesis
@@ -1193,16 +1217,16 @@ void UnitRoot<T>::show()
    // KPSS is a one-sided right-tailed test so we need to select different critical values than ADF, DFGLS and PP which are one-sided left-tailed tests
    if (test_name == "KPSS") {
       idx = {12, 10, 9};
-   } 
+   }
    else {
       idx = {2, 4, 5};
    }
-  
+
    if (std::isnan(stat)) {
       std::cout << "   1% " << std::setw(11) << -std::nan("") << "\n";
       std::cout << "   5% " << std::setw(11) << -std::nan("") << "\n";
       std::cout << "  10% " << std::setw(11) << -std::nan("") << "\n";
-   } 
+   }
    else {
       std::cout << "   1% " << std::setw(11) << critical_values[idx[0]] << "\n";
       std::cout << "   5% " << std::setw(11) << critical_values[idx[1]] << "\n";
@@ -1226,10 +1250,10 @@ void UnitRoot<T>::show()
    }
    else if (pval <= 0.10) {
       std::cout << "  We can reject H0 at the 10% significance level\n";
-   } 
+   }
    else if (!std::isnan(pval)) {
       std::cout << "  We cannot reject H0\n";
-   } 
+   }
    else {
       std::cout << "  We cannot conclude, nan produced\n";
    }
@@ -1237,7 +1261,7 @@ void UnitRoot<T>::show()
 
    // outputting OLS results
    if (regression) {
-       result->show();    
+       result->show();
    }
 }
 

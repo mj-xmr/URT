@@ -1,18 +1,20 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef TOOLS_HPP
 #define TOOLS_HPP
 
-// unseeded random number generator 
-static boost::mt19937 rng;
+#include "URTMin.hpp"
 
+#include <boost/random.hpp>
+// unseeded random number generator
 namespace urt {
+extern boost::mt19937 rng;
 
 //=================================================================================================
 
-// generate Vector of normally distributed random data 
+// generate Vector of normally distributed random data
 template <typename T>
 Vector<T> gaussian_noise(int n, T mu = 0.0, T sigma = 1.0)
 {

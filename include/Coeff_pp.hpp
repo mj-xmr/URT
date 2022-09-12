@@ -1,11 +1,15 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef COEFF_PP_HPP
 #define COEFF_PP_HPP
 
-static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_pptau = 
+#include <map>
+#include <vector>
+#include <string>
+
+static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_pptau =
 {
     {"nc",{
         {0.001,{
@@ -150,7 +154,7 @@ static const std::map<std::string,std::map<float,std::map<int,std::vector<float>
         }}
 };
 
-static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_pprho = 
+static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_pprho =
 {
     {"nc",{
         {0.001,{

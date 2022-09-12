@@ -1,17 +1,19 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
-#include "../include/URT.hpp"
+#include "../include/URTMin.hpp"
+#include "../include/PP.hpp"
+#include "../include/OLS.hpp"
 
-namespace urt { 
+namespace urt {
 
 //=================================================================================================
 
 // parameter constructor for computing PP test for a given number of lags
 template <typename T>
 PP<T>::PP(const Vector<T>& data, int lags, const std::string& trend, const std::string& test_type, bool regression) : ur(data, lags, trend, regression)
-{   
+{
    ur::test_name = _test_name;
    this->lags = lags;
    ur::test_type = test_type;
@@ -57,12 +59,12 @@ void PP<T>::compute_stat()
    }
 #endif
 
-   G /= n; 
+   G /= n;
 
    T term = 0;
    // computing long-run variance estimator (Newey-West)
    for (int j = 1; j <= lags; ++j) {
-      term += (1.0 - j / (lags + 1.0)) * G[j]; 
+      term += (1.0 - j / (lags + 1.0)) * G[j];
    }
    T L2 = G[0] + 2 * term;
    T rho = ur::result->param[0];
@@ -94,12 +96,12 @@ const T& PP<T>::statistic()
    this->lags = ur::lags;
    // this test is not augmented, ur::lags must always be 0 in ur::adf_regression() and ur::bootstrap()
    ur::lags = 0;
-   // setting regression trend 
+   // setting regression trend
    ur::set_trend();
    // setting test type tau or rho
    ur::set_test_type();
    // if new trend or bootstrap
-   if (ur::new_trend || ur::new_data) { 
+   if (ur::new_trend || ur::new_data) {
       // computing ADF regression
       ur::adf_regression();
       // computing test statistic

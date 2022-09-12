@@ -1,11 +1,15 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef COEFF_KPSS_HPP
 #define COEFF_KPSS_HPP
 
-static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_kpss = 
+#include <map>
+#include <vector>
+#include <string>
+
+static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_kpss =
 {
     {"c",{
         {0.001,{

@@ -1,12 +1,18 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef UNITROOT_HPP
 #define UNITROOT_HPP
 
+#include <memory>
+#include <map>
+#include <vector>
+#include <string>
+
 namespace urt {
 
+template<class T> class OLS;
 //=================================================================================================
 
 // Abstract base class from which all tests will derive
@@ -15,7 +21,7 @@ class UnitRoot
 {
  public:
    std::string lags_type;                 // default lags value long or short
-   std::string method;                    // method for lag length optimization  
+   std::string method;                    // method for lag length optimization
    std::string test_type;                 // t-statistic or normalized (tau or rho)
    std::string trend;                     // regression trend
 
@@ -25,7 +31,7 @@ class UnitRoot
    int max_lags = 0;                      // maximum number of lags for lag length optimization
    int niter = 1000;                      // number of iterations, required when bootstrap is set to true
 
-   bool bootstrap = false;                // compute critical values and p-value by bootstrap    
+   bool bootstrap = false;                // compute critical values and p-value by bootstrap
    bool regression = false;               // output OLS regression results if set to true
 
    // get test statistic
@@ -53,7 +59,7 @@ class UnitRoot
    Vector<T>* ptr = nullptr;               // pointer to data serie
 
    // pointer to critical values coefficients
-   const std::map<float,std::map<int,std::vector<float>>>* coeff_ptr = nullptr; 
+   const std::map<float,std::map<int,std::vector<float>>>* coeff_ptr = nullptr;
 
    std::string test_name;                 // test name
 
@@ -103,13 +109,13 @@ class UnitRoot
  private:
    Vector<T> data;               // original data used for the test
    Matrix<T> x;                  // matrix of independent variables for multi-linear regression
-   Vector<T> y;                  // vector of dependent variable for multi-linear regression 
+   Vector<T> y;                  // vector of dependent variable for multi-linear regression
    Vector<T> z;                  // vector of detrended data (by OLS or GLS)
 
    std::string prev_lags_type;   // previous type of lags
    std::string prev_method;      // previous method for lag length optimization
    std::string prev_test_type;   // previous test type (tau or rho)
-   std::string prev_trend;       // previous regression trend 
+   std::string prev_trend;       // previous regression trend
    std::string trend_type;       // regression trend for outputting test results
 
    T ICcc;                       // information criterion correction coefficient
@@ -118,25 +124,25 @@ class UnitRoot
    int nrows;                    // number of rows in matrix x and elements in vector y
    int prev_lags = 0;            // previous number of lags
    int prev_max_lags = 0;        // previous maximum number of lags
-   int prev_niter = 1000;        // previous number of iteratons     
-           
+   int prev_niter = 1000;        // previous number of iteratons
+
    bool new_niter = false;       // control if new number of iterations for bootstrap has been chosen
-   bool optim = false;           // control if lag length is optimized 
+   bool optim = false;           // control if lag length is optimized
    bool new_test = false;        // control if a new test is run (true) or all parameters remain the same (false)
    bool prev_bootstrap = false;  // previous bootstrap value
    bool prev_regression = false; // previous regression value
 
    // vector of test results for lag length optimization
-   std::vector<std::shared_ptr<OLS<T>>> results; 
+   std::vector<std::shared_ptr<OLS<T>>> results;
    // vector of valid methods for lag length optimization
    const std::vector<std::string> valid_methods{"AIC","BIC","HQC","MAIC","MBIC","MHQC","T-STAT"};
    // array of probabilities for p-value computation
    const float probas[15] = {0.001,0.005,0.01,0.025,0.05,0.10,0.20,0.50,0.80,0.90,0.95,0.975,0.99,0.995,0.999};
    // array containing tne test critical values
-   float critical_values[15]; 
-   // Information Criterion functor 
+   float critical_values[15];
+   // Information Criterion functor
    T (UnitRoot<T>::*ICfunc)(const std::shared_ptr<OLS<T>>& res);
-   // set Information Criterion function and correction coefficient 
+   // set Information Criterion function and correction coefficient
    void set_IC();
    // initialize dependent and independent variables in ADF test regression
    void initialize_adf();
@@ -150,10 +156,11 @@ class UnitRoot
    T MIC(const std::shared_ptr<OLS<T>>& res);
    // compute critical value from probabilities
    void compute_cv();
-   // compute p-value by linear interpolation from critical values 
+   // compute p-value by linear interpolation from critical values
    void compute_pval();
    // bootstrap test residuals for critical values and p-value computation
    void run_bootstrap();
+   void print_methods() const;
 };
 
 //=================================================================================================

@@ -1,19 +1,20 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef ADF_HPP
 #define ADF_HPP
 
 #include "Coeff_adf.hpp"
+#include "../include/UnitRoot.hpp"
 
 namespace urt {
 
 //=================================================================================================
 
-// Augmented Dickey-Fuller test 
+// Augmented Dickey-Fuller test
 template <typename T>
-class ADF : public UnitRoot<T> 
+class ADF : public UnitRoot<T>
 {
  public:
    // parameter constructor for computing ADF test for a given number of lags
@@ -31,7 +32,7 @@ class ADF : public UnitRoot<T>
    using ur = UnitRoot<T>;
    const char* _test_name = "Augmented Dickey-Fuller";
    const std::vector<std::string> _valid_trends{"nc","c","ct","ctt"};
-}; 
+};
 
 //=================================================================================================
 

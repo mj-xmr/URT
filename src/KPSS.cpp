@@ -1,8 +1,12 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
-#include "../include/URT.hpp"
+#include "../include/URTMin.hpp"
+#include "../include/KPSS.hpp"
+
+#include <numeric>
+#include <iostream>
 
 namespace urt {
 
@@ -14,7 +18,7 @@ KPSS<T>::KPSS(const Vector<T>& data, int lags, const std::string& trend) : ur(da
 {
    ur::test_name = _test_name;
    ur::valid_trends = _valid_trends;
-}  
+}
 
 //*************************************************************************************************
 
@@ -25,7 +29,7 @@ KPSS<T>::KPSS(const Vector<T>& data, const std::string lags_type, const std::str
    ur::test_name = _test_name;
    ur::valid_trends = _valid_trends;
    ur::lags_type = lags_type;
-}  
+}
 
 //*************************************************************************************************
 
@@ -75,7 +79,7 @@ void KPSS<T>::compute_stat()
 // compute KPSS test statistic
 template <typename T>
 const T& KPSS<T>::statistic()
-{  
+{
    // setting type of lags (if a default type of lags value has been chosen)
    ur::set_lags_type();
    // setting number of lags
@@ -130,7 +134,7 @@ template <class T>
 void KPSS<T>::show()
 {
    // in case user modified test type, for KPSS it should always be empty
-   ur::test_type = std::string();  
+   ur::test_type = std::string();
    // in case user modified method for KPSS it should always be empty
    ur::method = std::string();
    // in case user turned ur::regression to true, KPSS did not use an OLS regression but an OLS detrending

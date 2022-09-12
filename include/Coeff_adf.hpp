@@ -1,5 +1,5 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef COEFF_ADF_HPP
@@ -8,16 +8,20 @@
 // critical values response surface coefficients
 // for each probability or significance level the associated quantile is estimated via the following regression:
 // C(k,T)(p) = B0 + B1/T + B2/T^2 + B3*(k/T) + B4*(k/T)^2 + e(k,T)
-// with T = N - k - 1 where N is the sample size, k is the number of lags, T is the effective number of observations and e(k,T) the residuals 
+// with T = N - k - 1 where N is the sample size, k is the number of lags, T is the effective number of observations and e(k,T) the residuals
 // B0 is the asymptotic critical value of the test for the p significance level
-// this is an example, in some cases we will have more term in 1/T^i or (k/T)^i 
+// this is an example, in some cases we will have more term in 1/T^i or (k/T)^i
 // in the example above, index 0 would contain B0, B1 and B2 and index 1 B3 and B4
 // The choice of the number of regressors has been made looking at the precision of each model estimation by comparing with Monte-Carlo simulated critical values, and taking into account the regression quality that is the parameters heteroskedasticity consistent standard errors and t values, the regression standard error, the Akaike information criterion, the goodness of fit R and the residuals auto-correlation.
 // We have taken care especially of the quality of the 1%, 5% and 10% confidence levels regressions.
 
 // We have used the methodology explained in "Lag Order and Critical Values of the Augmented Dickey-Fuller Test" by Cheung and Lai (1995), we have extended the sample sizes and number of lags and have used more replications to get more accurate results.
 
-static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_adf = 
+#include <map>
+#include <vector>
+#include <string>
+
+static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_adf =
 {
     {"nc",{
         {0.001,{

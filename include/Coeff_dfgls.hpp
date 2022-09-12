@@ -1,11 +1,15 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef COEFF_DFGLS_HPP
 #define COEFF_DFGLS_HPP
 
-static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_dfgls = 
+#include <map>
+#include <vector>
+#include <string>
+
+static const std::map<std::string,std::map<float,std::map<int,std::vector<float>>>> coeff_dfgls =
 {
     {"c",{
         {0.001,{

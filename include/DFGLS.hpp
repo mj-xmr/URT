@@ -1,11 +1,12 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef DFGLS_HPP
 #define DFGLS_HPP
 
 #include "Coeff_dfgls.hpp"
+#include "../include/UnitRoot.hpp"
 
 namespace urt {
 
@@ -15,7 +16,7 @@ namespace urt {
 template <typename T>
 class DFGLS : public UnitRoot<T>
 {
- public:   
+ public:
     // parameter constructor for computing DF-GLS test for a given number of lags
     DFGLS(const Vector<T>& data, int lags, const std::string& trend = "c", bool regression = false);
     // parameter constructor for computing ADF test with lag length optimization

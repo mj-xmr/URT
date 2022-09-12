@@ -1,8 +1,16 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
-#include "../include/URT.hpp"
+#include "../include/URTMin.hpp"
+#include "../include/OLS.hpp"
+
+#include <boost/math/distributions/students_t.hpp>
+
+#include <iostream>
+#include <iomanip>
+
+using namespace std;
 
 namespace urt {
 
@@ -11,7 +19,7 @@ namespace urt {
 // parameter constructor
 template <class T>
 OLS<T>::OLS(const Vector<T>& y, const Matrix<T>& x, bool stats)
-{ 
+{
    // controlling x and y dimensions
    #ifdef USE_ARMA
    if (y.n_elem != x.n_rows) {
@@ -27,7 +35,7 @@ OLS<T>::OLS(const Vector<T>& y, const Matrix<T>& x, bool stats)
    #endif
       throw std::invalid_argument("\n  Error: in OLS::OLS(), y vector and x matrix must not be empty.\n\n");
    }
- 
+
    #ifdef USE_ARMA
    // number of observations
    this->nobs = x.n_rows;
@@ -38,13 +46,13 @@ OLS<T>::OLS(const Vector<T>& y, const Matrix<T>& x, bool stats)
    this->nobs = x.rows();
    // number of regressors
    #ifdef USE_BLAZE
-   this->nreg = x.columns(); 
+   this->nreg = x.columns();
    #elif USE_EIGEN
    this->nreg = x.cols();
-   #endif    
+   #endif
    #endif
 
-   // error number of degrees of freedom 
+   // error number of degrees of freedom
    this->ndf = nobs - nreg;
 
    try
@@ -69,7 +77,7 @@ OLS<T>::OLS(const Vector<T>& y, const Matrix<T>& x, bool stats)
       this->param = ix2 * (x.transpose() * y);
       #endif
 
-      // computing residuals 
+      // computing residuals
       this->resid = y - x * param;
 
       // computing sum of squared residuals
@@ -106,11 +114,11 @@ OLS<T>::OLS(const Vector<T>& y, const Matrix<T>& x, bool stats)
    }
    // catching any exception caused by arma::inv()
    catch (std::exception& e) {
-      std::cout << e.what() << "\n";  
+      std::cout << e.what() << "\n";
       throw std::invalid_argument("\n  Error: in OLS::OLS(), matrix inversion failed in OLS regression, please check x matrix.\n\n");
    }
 
-   this->stats = stats;  
+   this->stats = stats;
    // computing regression statistics
    if (stats) {
       this->get_stats(y, x);
@@ -125,7 +133,7 @@ void OLS<T>::get_stats(const Vector<T>& y, const Matrix<T>& x)
 {
    // number of variables
    this->nvar = nreg;
-        
+
    // testing if x contains an intercept (some stats are computed differently wether the regression contains an intercept or not)
    for (int i = 0; i < nreg; ++i) {
       // testing if the sum of elements if the ith column is equal to the number of rows
@@ -201,7 +209,7 @@ void OLS<T>::get_stats(const Vector<T>& y, const Matrix<T>& x)
    this->DW_stat = arma::as_scalar(temp.t() * temp) / SSR;
    #elif USE_BLAZE
    Vector<T> temp = subvector(resid, 1, resid.size() - 1) - subvector(resid, 0, resid.size() - 1);
-   this->DW_stat = (blaze::trans(temp) * temp) / SSR; 
+   this->DW_stat = (blaze::trans(temp) * temp) / SSR;
    #elif USE_EIGEN
    Vector<T> temp = resid.segment(1, resid.size() - 1) - resid.segment(0, resid.size() - 1);
    this->DW_stat = temp.dot(temp) / SSR;
@@ -227,12 +235,12 @@ void OLS<T>::show()
    for (int j = 0; j < nreg; ++j) {
       if (!std::isnan(t_stat[j])) {
          pval[j] = P(t_stat[j]);
-      } 
+      }
       else {
          pval[j] = -std::nan("");
       }
    }
-    
+
    int gap = 2;
 
    (intercept) ? gap += 9 : gap += 1 + std::to_string(nreg).length();
@@ -266,7 +274,7 @@ void OLS<T>::show()
    int i, n, k = 0;
 
    (intercept) ? idx[k++] = j0, i = 0 : i = 1;
-    
+
    for (int j = 0; j < nreg; ++j) {
       if (!intercept || (intercept && j != j0)) {
          idx[k++] = j;
@@ -274,7 +282,7 @@ void OLS<T>::show()
    }
 
    for (const auto& j : idx)
-   { 
+   {
       if (intercept && !i) {
          std::cout << std::setw(gap) << "Intercept";
          ++i;
@@ -285,10 +293,10 @@ void OLS<T>::show()
       n = std::to_string(int(fabs(param[j]))).length();
 
       if (fabs(param[j]) >= 1e6 || fabs(param[j]) < 1e-5) {
-         std::cout << std::scientific; 
+         std::cout << std::scientific;
          std::cout << std::setprecision(1);
       } else {
-         std::cout << std::fixed; 
+         std::cout << std::fixed;
          std::cout << std::setprecision(6 - n);
       }
       std::cout << std::setw(11) << param[j];
@@ -300,9 +308,9 @@ void OLS<T>::show()
 
       if (sqrt(var[j]) >= 1e6 || sqrt(var[j]) < 1e-4) {
          std::cout << std::scientific;
-         std::cout << std::setprecision(1); 
+         std::cout << std::setprecision(1);
       } else {
-         std::cout << std::fixed; 
+         std::cout << std::fixed;
          std::cout << std::setprecision(std::max(5 - n, 0));
       }
       std::cout << std::setw(11) << sqrt(var[j]);
@@ -314,9 +322,9 @@ void OLS<T>::show()
 
       if (fabs(t_stat[j]) >= 1e6 || fabs(t_stat[j]) < 1e-3) {
          std::cout << std::scientific;
-         std::cout << std::setprecision(1); 
+         std::cout << std::setprecision(1);
       } else {
-         std::cout << std::fixed; 
+         std::cout << std::fixed;
          std::cout << std::setprecision(std::max(4 - n, 0));
       }
       std::cout << std::setw(10) << t_stat[j];
@@ -339,10 +347,10 @@ void OLS<T>::show()
    int nres = resid.size();
    #endif
 
-   std::cout << std::setw(10) << "Min" 
-             << std::setw(8) << "1Q" 
-             << std::setw(8) << "Median" 
-             << std::setw(8) << "3Q" 
+   std::cout << std::setw(10) << "Min"
+             << std::setw(8) << "1Q"
+             << std::setw(8) << "Median"
+             << std::setw(8) << "3Q"
              << std::setw(8) << "Max";
    std::cout << "\n";
 
@@ -354,9 +362,9 @@ void OLS<T>::show()
    if (resid.cwiseAbs().maxCoeff() >= 1e3 || resid.cwiseAbs().maxCoeff() < 1e-3) {
    #endif
       std::cout << std::scientific;
-      std::cout << std::setprecision(1); 
+      std::cout << std::setprecision(1);
    } else {
-      std::cout << std::fixed; 
+      std::cout << std::fixed;
       std::cout << std::setprecision(std::max(4 - n, 0));
    }
 
@@ -398,9 +406,9 @@ void OLS<T>::show()
 
    if (fabs(mu) >= 1e3 || fabs(mu) < 1e-3) {
       std::cout << std::scientific;
-      std::cout << std::setprecision(1); 
+      std::cout << std::setprecision(1);
    } else {
-      std::cout << std::fixed; 
+      std::cout << std::fixed;
       std::cout << std::setprecision(std::max(4 - n, 0));
    }
 
@@ -411,9 +419,9 @@ void OLS<T>::show()
 
    if (sqrt(MSE) >= 1e3 || sqrt(MSE) < 1e-3) {
       std::cout << std::scientific;
-      std::cout << std::setprecision(1); 
+      std::cout << std::setprecision(1);
    } else {
-      std::cout << std::fixed; 
+      std::cout << std::fixed;
       std::cout << std::setprecision(std::max(4 - n, 0));
    }
 
@@ -425,24 +433,24 @@ void OLS<T>::show()
       // outputting multiple R-squared and adjusted R-squared
       std::cout << "  Multiple R-squared            " << std::setw(10) << std::setprecision(5) << R2 << "\n";
       std::cout << "  Adjusted R-squared            " << std::setw(10) << std::setprecision(5) << adj_R2 << "\n";
-      
+
       // outputting F-statistic
       n = std::to_string(int(F_stat)).length();
 
       if (sqrt(MSE) >= 1e4 || sqrt(MSE) < 1e-3) {
          std::cout << std::scientific;
-         std::cout << std::setprecision(1); 
+         std::cout << std::setprecision(1);
       } else {
-         std::cout << std::fixed; 
+         std::cout << std::fixed;
          std::cout << std::setprecision(std::max(4 - n, 0));
       }
 
       std::cout << "  F-statistic (p-value)         " << std::setw(10) << std::setprecision(2) << F_stat << " ";
       std::cout << "(" << 1 - boost::math::ibeta(nvar/2, ndf/2, F_stat*nvar/(F_stat*nvar + ndf)) << ")\n";
-      
+
       // outputting Durbin-Watson statistic
       std::cout << std::fixed;
-      std::cout << "  Durbin-Watson statistic       " << std::setw(10) << std::setprecision(3) << DW_stat << "\n";  
+      std::cout << "  Durbin-Watson statistic       " << std::setw(10) << std::setprecision(3) << DW_stat << "\n";
    }
    std::cout << "\n";
 }

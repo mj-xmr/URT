@@ -1,11 +1,12 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
 #ifndef KPSS_HPP
 #define KPSS_HPP
 
 #include "Coeff_kpss.hpp"
+#include "../include/UnitRoot.hpp"
 
 namespace urt {
 

@@ -1,8 +1,9 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
-#include "../include/URT.hpp"
+#include "../include/URTMin.hpp"
+#include "../include/DFGLS.hpp"
 
 namespace urt {
 
@@ -71,7 +72,7 @@ const T& DFGLS<T>::pvalue()
    ur::pvalue();
 
    return ur::pval;
-} 
+}
 
 //*************************************************************************************************
 
@@ -80,7 +81,7 @@ template <class T>
 void DFGLS<T>::show()
 {
    // in case user modified test type, for DFGLS it should always be empty
-   ur::test_type = std::string();  
+   ur::test_type = std::string();
    // computing p-value
    this->pvalue();
    // outputting results

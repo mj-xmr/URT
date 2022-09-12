@@ -1,8 +1,9 @@
 //=================================================================================================
-//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved                      
+//                    Copyright (C) 2016 Olivier Mallet - All Rights Reserved
 //=================================================================================================
 
-#include "../include/URT.hpp"
+#include "../include/URTMin.hpp"
+#include "../include/ADF.hpp"
 
 namespace urt {
 
@@ -60,7 +61,7 @@ const T& ADF<T>::pvalue()
    ur::pvalue();
 
    return ur::pval;
-} 
+}
 
 //*************************************************************************************************
 
@@ -69,7 +70,7 @@ template <class T>
 void ADF<T>::show()
 {
    // in case user modified test type, for ADF it should always be empty
-   ur::test_type = std::string();  
+   ur::test_type = std::string();
    // computing p-value
    this->pvalue();
    // outputting results
